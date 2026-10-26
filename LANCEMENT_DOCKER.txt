@@ -1,0 +1,48 @@
+LOAD BALANCER INTELLIGENT - LANCEMENT AVEC DOCKER
+================================================
+
+Option 1 - Image Docker deja construite (aucun Python requis)
+----------------------------------------------------------------
+1. Placez-vous dans le dossier contenant le fichier .tar.
+2. Chargez l'image :
+
+   docker load -i load-balancer-intelligent-1.0.tar
+
+3. Lancez l'application :
+
+   docker run --rm -p 5000:5000 load-balancer-intelligent:1.0
+
+4. Ouvrez http://localhost:5000
+5. Pour arreter l'application, tapez Ctrl+C dans le terminal.
+
+
+Option 2 - Code source ZIP
+--------------------------
+1. Decompressez le fichier ZIP.
+2. Ouvrez un terminal dans le dossier extrait.
+3. Lancez :
+
+   docker compose up --build
+
+4. Ouvrez http://localhost:5000
+5. Pour arreter :
+
+   docker compose down
+
+
+Verification facultative
+------------------------
+Pendant que l'application fonctionne, ouvrez :
+
+   http://localhost:5000/api/config
+
+Cette adresse doit afficher la configuration du MDP au format JSON.
+
+
+Remarque
+--------
+Le port 5000 doit etre disponible. S'il est deja utilise, lancez par exemple :
+
+   docker run --rm -p 8080:5000 load-balancer-intelligent:1.0
+
+Puis ouvrez http://localhost:8080

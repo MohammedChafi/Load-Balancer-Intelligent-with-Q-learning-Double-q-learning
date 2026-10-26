@@ -1,0 +1,54 @@
+﻿LOAD BALANCER INTELLIGENT — MISE À JOUR AVEC OPTIMISATION
+
+Cette archive contient le code complet de l'application avec la nouvelle
+section 4 « Optimisation des paramètres ».
+
+POUR METTRE À JOUR VOTRE PROJET EXISTANT
+
+1. Arrêtez votre serveur actuel (Ctrl+C dans son terminal).
+2. Décompressez cette archive : elle contient un dossier lb_project.
+3. Copiez le CONTENU de ce dossier dans votre dossier de projet existant,
+   celui où se trouve déjà run.py. Acceptez le remplacement des fichiers
+   de même nom et la fusion des dossiers app, static et tests.
+   Ne créez pas un deuxième dossier lb_project à l'intérieur du premier.
+4. Gardez votre environnement Python habituel et votre dossier models.
+   Aucun environnement .venv ni modèle qtables.json n'est livré ici :
+   votre modèle existant est donc conservé lors de la fusion.
+5. Dans le dossier contenant run.py, lancez comme avant :
+
+       python run.py
+
+6. Ouvrez http://localhost:5000/#optimization
+   Descendez à la section 4 et cliquez sur « Trouver des paramètres optimisés ».
+   Si l'ancienne page reste affichée, actualisez avec Ctrl+F5.
+
+Aucune nouvelle dépendance n'est requise : Flask reste la seule dépendance.
+Les sections 0 à 3 et les règles d'apprentissage existantes sont conservées.
+
+POUR UNE INSTALLATION NEUVE
+
+Ouvrez le dossier lb_project extrait, puis, dans votre environnement Python :
+
+    python -m pip install -r requirements.txt
+    python run.py
+
+Le dossier models est fourni sans modèle préentraîné. L'application peut
+démarrer sans modèle ; entraînez les agents avant d'utiliser les fonctions
+qui nécessitent des tables apprises.
+
+NOUVELLE SECTION
+
+Méthodes : Grid search, Random search, optimisation bayésienne,
+Latin hypercube et Hyperband.
+
+Choisissez un agent ou les deux, les épisodes et le budget de recherche,
+puis lancez l'optimisation. Les essais sont isolés du modèle principal.
+Les résultats et modèles optimisés sont enregistrés dans models/optimization.
+La sélection utilise la validation, suivie d'un test indépendant.
+Commencez avec un petit budget ; augmentez-le pour une étude complète.
+
+VÉRIFICATION FACULTATIVE
+
+    python -m unittest discover -s tests -v
+
+La suite contient 17 tests. Pour le protocole détaillé, lire OPTIMIZATION.md.

@@ -1,0 +1,441 @@
+<!DOCTYPE html>
+<html lang="fr"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Load Balancer intelligent</title>
+<style>
+:root{--bg:#f3f5f8;--panel:#fff;--ink:#14202e;--mute:#5d6b7c;--line:#d9e0e8;--acc:#0f7b8a;--hl:15,123,138;--l0:#2e9e6a;--l1:#d99a1a;--l2:#d4483b;--sa:#5b6cf0;--sb:#0f9ab0;--sc:#d6568c;color-scheme:light}
+@media (prefers-color-scheme:dark){:root{--bg:#0f1620;--panel:#172231;--ink:#e6edf5;--mute:#93a3b6;--line:#263548;--acc:#3cc0cf;--hl:60,192,207;color-scheme:dark}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 system-ui,-apple-system,"Segoe UI",sans-serif}
+main{max-width:1180px;margin:0 auto;padding:20px 16px 48px}
+h1{font-size:28px;margin:8px 0 4px;letter-spacing:-.02em}
+h2{font-size:19px;margin:0 0 12px}h3{font-size:15px;margin:14px 0 6px}h4{margin:0 0 4px;font-size:14px}
+p.sub{color:var(--mute);margin:0 0 14px;max-width:80ch}
+section{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:18px;margin-bottom:18px}
+.row{display:flex;flex-wrap:wrap;gap:12px;align-items:end;margin-bottom:14px}
+label{display:flex;flex-direction:column;font-size:13px;color:var(--mute);gap:3px}
+input,select{font:inherit;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:7px 9px;width:120px}
+select{width:auto}input[type=range]{padding:0;width:150px;accent-color:var(--acc)}
+button{font:inherit;font-weight:600;border:0;border-radius:8px;padding:9px 16px;background:var(--acc);color:#fff;cursor:pointer}
+@media (prefers-color-scheme:dark){button{color:#06222a}}
+button.ghost{background:transparent;color:var(--ink);border:1px solid var(--line)}
+button:disabled,select:disabled{opacity:.45;cursor:not-allowed}
+button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid var(--acc);outline-offset:2px}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+@media(max-width:860px){.grid{grid-template-columns:1fr}}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:12px}
+.cards>div{background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:10px 12px;font-size:14px;color:var(--mute)}
+.cards b,details b{color:var(--ink)}
+canvas{width:100%;display:block;border-radius:8px}
+.stats{display:flex;flex-wrap:wrap;gap:6px 22px;margin:10px 0;font-size:14px}.stats b{font-variant-numeric:tabular-nums}
+.bar{height:6px;background:var(--line);border-radius:3px;overflow:hidden;margin-bottom:12px}.bar i{display:block;height:100%;width:0;background:var(--acc)}
+.qwrap{max-height:440px;overflow:auto;border:1px solid var(--line);border-radius:8px}
+table{border-collapse:collapse;width:100%;font-variant-numeric:tabular-nums;font-size:13px}
+th,td{padding:4px 8px;text-align:right;border-bottom:1px solid var(--line);white-space:nowrap}
+th{position:sticky;top:0;background:var(--panel);color:var(--mute);font-weight:600}
+td:first-child,th:first-child{text-align:left}
+td.best{font-weight:800;outline:2px solid var(--acc);outline-offset:-2px}td.hot{box-shadow:inset 0 0 0 2px #e0a21b}
+.st i{display:inline-block;width:18px;height:18px;line-height:18px;text-align:center;border-radius:4px;color:#fff;font-style:normal;font-size:11px;margin-right:2px}
+.l0{background:var(--l0)}.l1{background:var(--l1)}.l2{background:var(--l2)}
+.legend,.note{font-size:13px;color:var(--mute);margin:6px 0}
+.legend i.k{display:inline-block;width:10px;height:10px;border-radius:2px;margin:0 4px 0 10px}
+details{background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:10px 14px;margin:0 0 14px}
+summary{cursor:pointer;font-weight:700}details p{color:var(--mute);margin:8px 0;max-width:90ch}
+code{background:var(--panel);padding:1px 5px;border-radius:4px;font-size:13px}
+.ok{color:var(--l0)}.ko{color:var(--l2)}
+small{font-size:11px;color:var(--mute);font-weight:400}
+.steps{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:10px;margin:10px 0}
+.steps>div{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:10px 12px;font-size:14px;color:var(--mute)}
+.steps b{display:block;color:var(--ink);margin-bottom:2px}
+.steps .n{display:inline-block;width:22px;height:22px;line-height:22px;text-align:center;border-radius:50%;background:var(--acc);color:#fff;font-weight:800;font-size:13px;margin-right:6px}
+.chip{display:inline-block;min-width:26px;padding:2px 8px;border-radius:6px;color:#fff;font-weight:800;text-align:center}
+.mbar{display:inline-block;width:70px;height:7px;background:var(--line);border-radius:4px;vertical-align:middle;overflow:hidden}.mbar i{display:block;height:100%;background:var(--acc)}
+.insights ul{margin:6px 0 10px;padding-left:20px}.insights li{margin:3px 0}
+.story{background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:12px 16px;line-height:1.65;min-height:120px}
+.story ol{margin:6px 0;padding-left:20px}.story li{margin:9px 0}
+tr.dim td{color:var(--mute);opacity:.7}
+.phase{font-size:15px;margin:6px 0;min-height:24px}
+dl dt{font-weight:700;margin-top:8px}dl dd{margin:0;color:var(--mute)}
+</style>
+<link rel="stylesheet" href="/optimization-assets/optimization.css">
+</head><body><main>
+<h1>Load Balancer intelligent</h1>
+<p class="sub">Toute la logique tourne en Python : le MDP, le simulateur, Q-Learning, Double Q-Learning et la décision pour chaque requête. Cette page ne fait qu’interroger l’API et afficher ce qu’elle renvoie.</p>
+<p class="note" id="conn">Connexion à l’API…</p>
+
+<section><h2>0. Le problème modélisé (MDP)</h2><div id="mdp" class="cards">Chargement…</div>
+<details style="margin-top:12px"><summary>Les 27 états</summary><div class="qwrap"><table><thead><tr><th>N°</th><th>Niveaux A B C</th><th>Description</th></tr></thead><tbody id="states"></tbody></table></div></details></section>
+
+<section id="s1"><h2>1. Entraînement : l’agent apprend par essais et erreurs</h2>
+<details open><summary>Comprendre en une minute</summary>
+<p><b>L’idée :</b> au départ, l’agent ne sait rien. Pour chaque requête qui arrive, il doit choisir un serveur (A, B ou C). Il essaie, constate si le choix était bon ou mauvais, et note le résultat dans un carnet appelé <b>table Q</b>. Après des milliers d’essais, son carnet lui dit quel serveur choisir dans chaque situation. Personne ne lui donne la réponse : il la découvre.</p>
+<div class="steps">
+<div><b><span class="n">1</span>Observer</b>L’agent regarde la charge des 3 serveurs : faible (vert), moyenne (orange) ou élevée (rouge). Cette « photo » s’appelle la <b>situation</b> (ou état).</div>
+<div><b><span class="n">2</span>Choisir</b>Il envoie la requête à A, B ou C. Au début il choisit souvent au hasard pour tout essayer.</div>
+<div><b><span class="n">3</span>Recevoir une note</b>Plus la requête est rapide et plus le serveur est peu chargé, meilleure est la note. Un rejet donne une très mauvaise note. La note est toujours négative : <b>plus elle est proche de 0, mieux c’est</b>.</div>
+<div><b><span class="n">4</span>Corriger son carnet</b>Il compare la note reçue à ce que son carnet prévoyait et corrige un petit peu la case concernée.</div>
+</div>
+<p><b>Pourquoi deux agents ?</b> <b>Q-Learning</b> a un seul carnet : il juge ses propres choix et peut devenir trop optimiste. <b>Double Q-Learning</b> a deux carnets (QA et QB) : l’un propose, l’autre vérifie. On compare les deux pour voir si cette précaution aide.</p></details>
+<details><summary>Les mots à connaître</summary><dl>
+<dt>Situation (état)</dt><dd>Le niveau de charge de A, B et C à l’arrivée d’une requête. 27 situations possibles (3 niveaux pour chacun des 3 serveurs).</dd>
+<dt>Action</dt><dd>Le serveur choisi pour la requête : A, B ou C.</dd>
+<dt>Note (récompense)</dt><dd>Le résultat du choix : lenteur, charge, rejet. Toujours négative, proche de 0 = bon.</dd>
+<dt>Épisode</dt><dd>Une « partie » d’entraînement : 200 requêtes d’affilée avec un trafic différent.</dd>
+<dt>Explorer ou exploiter (ε)</dt><dd>Explorer = choisir au hasard pour découvrir. Exploiter = suivre son carnet. ε est la part d’exploration : elle baisse de 100 % à 5 % au fil de l’entraînement.</dd>
+<dt>η (vitesse d’apprentissage)</dt><dd>De quelle part l’agent corrige son carnet à chaque fois. Petit = prudent, grand = change vite d’avis.</dd>
+<dt>γ (importance du futur)</dt><dd>0 = l’agent ne pense qu’à la requête en cours. Proche de 1 = il tient compte des conséquences sur les requêtes suivantes (un serveur trop chargé ralentira les prochaines).</dd>
+<dt>Table Q (le carnet)</dt><dd>Pour chaque situation et chaque serveur, une note moyenne attendue. Le serveur préféré dans une situation est celui dont la note est la plus proche de 0.</dd>
+</dl></details>
+<div class="row">
+<button class="ghost" id="pre1" title="300 épisodes avec une pause pour pouvoir suivre">Mode découverte (lent)</button>
+<button class="ghost" id="pre2" title="5 000 épisodes sans pause">Mode complet (rapide)</button></div>
+<div class="row">
+<label>Épisodes<input id="nep" type="number" value="5000" min="50" max="100000" step="50"><small>nombre de parties</small></label>
+<label>η<input id="lr" type="number" value="0.1" min="0.01" max="1" step="0.01"><small>vitesse d’apprentissage</small></label>
+<label>γ<input id="gm" type="number" value="0.9" min="0" max="0.99" step="0.05"><small>importance du futur</small></label>
+<label>Pause (ms)<input id="dl" type="number" value="0" min="0" max="500" step="5"><small>entre deux épisodes</small></label>
+<button id="go">Lancer l’entraînement</button><button class="ghost" id="stop" disabled>Arrêter</button></div>
+<div class="bar"><i id="pb"></i></div>
+<div class="stats"><span>Parties jouées <b id="te">0</b></span><span>Requêtes vues par chaque agent <b id="ts">0</b></span><span>Durée <b id="tt">0</b> s</span></div>
+<p class="phase" id="phase"></p>
+<p class="note" id="res"></p>
+
+<h3>La courbe d’apprentissage</h3>
+<canvas id="curve" height="260"></canvas>
+<p class="legend"><i class="k" style="background:#d9822b"></i>Q-Learning<i class="k" style="background:#1b8f8a"></i>Double Q-Learning. <b>Plus la courbe monte, meilleures sont les décisions</b> (note totale d’une partie, lissée sur 100 parties). Elle est basse et irrégulière au début, car l’agent choisit encore au hasard.</p>
+
+<h3>Une décision à la loupe</h3>
+<p class="note">Voici, en français, ce que fait l’agent pour <b>une seule requête</b>, et comment il corrige son carnet. Pendant l’entraînement l’exemple change toutes les 3 secondes : utilisez « Figer » pour prendre le temps de lire, ou parcourez les exemples récents.</p>
+<div class="row"><label>Agent<select id="usel"><option value="qlearning">Q-Learning</option><option value="double_qlearning">Double Q-Learning</option></select></label>
+<button class="ghost" id="prev">◀ Précédent</button><button class="ghost" id="freeze">Figer</button><button class="ghost" id="next">Suivant ▶</button></div>
+<div class="story" id="story">L’exemple apparaîtra dès que l’entraînement démarre.</div>
+
+<h3>Ce que l’agent a appris</h3>
+<p class="note">Pour chaque situation possible, le carnet désigne un serveur préféré. Au début le carnet est vide (« ? »). La barre indique si l’agent est sûr de son choix. Ce tableau se rafraîchit toutes les 3 secondes pour rester lisible.</p>
+<div class="row"><label>Agent<select id="psel"><option value="ql">Q-Learning</option><option value="dq">Double Q-Learning</option></select></label>
+<label>Moment<select id="snap"><option value="live">Maintenant</option></select></label></div>
+<div class="insights" id="insights"></div>
+<div class="qwrap"><table><thead><tr><th>Situation</th><th>En clair</th><th>Serveur préféré</th><th>Sûr de lui ?</th><th>Fois vécue</th></tr></thead><tbody id="pol"></tbody></table></div>
+<p class="legend"><i class="k l0"></i>faible (moins de 40 % de CPU)<i class="k l1"></i>moyenne (40 à 70 %)<i class="k l2"></i>élevée (plus de 70 %)</p>
+
+<details id="expert" style="margin-top:14px"><summary>Mode expert : les valeurs brutes du carnet et le détail des calculs</summary>
+<p>Ces valeurs sont exactement celles calculées par Python. Elles changent à chaque requête pendant l’entraînement, d’où le rafraîchissement limité. Un cadre bleu marque la meilleure valeur de chaque ligne ; un cadre jaune, une case corrigée à l’instant.</p>
+<div class="row"><label>Table<select id="qsel"><option value="ql:Q">Q-Learning : Q</option><option value="dq:Q">Double Q : (QA+QB)/2</option><option value="dq:QA">Double Q : QA</option><option value="dq:QB">Double Q : QB</option><option value="ql:N">Q-Learning : fois vécue</option><option value="dq:N">Double Q : fois vécue</option></select></label><button class="ghost" id="rfs">Rafraîchir</button></div>
+<div class="qwrap"><table><thead><tr><th>Situation</th><th>→ A</th><th>→ B</th><th>→ C</th></tr></thead><tbody id="qb"></tbody></table></div>
+<h3>Journal des corrections (agent choisi dans « Une décision à la loupe »)</h3>
+<div class="qwrap" style="max-height:300px"><table><thead><tr><th>N°</th><th>Partie</th><th>Situation</th><th>Serveur</th><th>Choix</th><th>Note</th><th>Carnet</th><th>Avant</th><th>γ×futur</th><th>Cible</th><th>Écart</th><th>Après</th></tr></thead><tbody id="ub"></tbody></table></div>
+<p class="note">Cible = note + γ × valeur du futur. Après = Avant + η × (Cible − Avant).</p></details>
+</section>
+
+<section><h2>2. Test : comparaison avec Round Robin</h2>
+<details open><summary>Comment lire ce tableau</summary><p>Les trois méthodes passent sur les mêmes scénarios de trafic (faible, moyen, élevé) et les mêmes graines, jamais vues pendant l’entraînement, sans exploration et sans apprentissage. Chaque valeur est une moyenne ± écart-type sur les graines. Latence, p95, rejets et écart de charge : plus petit est meilleur. Débit et récompense : plus grand est meilleur.</p></details>
+<div class="row"><button id="evbtn" disabled>Lancer le test</button><span class="note" id="evmsg"></span></div><div id="ev"></div></section>
+
+<section><h2>3. Simulation en direct</h2>
+<details open><summary>Qui décide ?</summary><p>Le front ne décide rien. Toutes les 150 ms il demande à l’API (<code>POST /api/live/&lt;session&gt;/tick</code>) de faire avancer le temps. Python génère les requêtes qui arrivent, lit l’état des serveurs, consulte sa table Q (ou applique Round Robin), choisit le serveur, applique la décision et renvoie le résultat. Les points sont des requêtes ; rouge = rejet (serveur saturé ou en panne). Un serveur en panne est interdit pour tous les algorithmes.</p></details>
+<div class="row">
+<label>Algorithme<select id="alg"><option value="round_robin">Round Robin</option><option value="qlearning" disabled>Q-Learning</option><option value="double_qlearning" disabled>Double Q-Learning</option></select></label>
+<label>Trafic : <span id="lv">70 %</span><input id="load" type="range" min="30" max="100" value="70"></label>
+<label>Vitesse : <span id="sv">×0.25</span><input id="spd" type="range" min="5" max="100" value="25"></label>
+<button id="run">Démarrer</button>
+<button class="ghost" data-f="A">Panne A</button><button class="ghost" data-f="B">Panne B</button><button class="ghost" data-f="C">Panne C</button><button class="ghost" id="burst">Pic de trafic</button></div>
+<canvas id="sim" height="330"></canvas>
+<div class="stats"><span>Requêtes <b id="n">0</b></span><span>Latence moy. <b id="lm">–</b></span><span>p95 <b id="lp">–</b></span><span>Rejets <b id="fl">0</b></span><span>Débit <b id="th">–</b></span><span>Écart de charge <b id="gp">–</b></span><span>Récompense <b id="rw">0</b></span></div>
+<h3>Journal des décisions prises par Python</h3>
+<div class="qwrap" style="max-height:300px"><table><thead><tr><th>N°</th><th>État vu</th><th>CPU vu A/B/C (%)</th><th>Valeurs Q A / B / C</th><th>Choix</th><th>Résultat</th><th>Récompense (détail)</th><th>Pourquoi ce choix</th></tr></thead><tbody id="lb"></tbody></table></div>
+</section>
+<section id="optimization" aria-labelledby="opt-title">
+ <div class="opt-heading"><div><p class="opt-eyebrow">ALLER PLUS LOIN</p><h2 id="opt-title">4. Optimisation des paramètres</h2></div><span class="opt-badge">γ &amp; η</span></div>
+ <p class="sub">Quel poids donner au futur ? À quelle vitesse apprendre ? Entraînez plusieurs agents pour trouver les paramètres les plus efficaces dans notre simulation.</p>
+ <details id="opt-panel" class="opt-panel">
+  <summary>Trouver des paramètres optimisés <span class="opt-summary-hint">5 méthodes de recherche</span></summary>
+  <div class="opt-body">
+   <div class="opt-steps"><span><b>1</b> Choisir une méthode</span><span><b>2</b> Entraîner et comparer</span><span><b>3</b> Confirmer sur un nouveau test</span></div>
+   <form id="opt-form">
+    <div class="opt-setup">
+     <label>Méthode de recherche<select id="opt-method" name="method"><option value="grid">Grid search · recherche sur grille</option><option value="random">Random search · recherche aléatoire</option><option value="bayesian">Optimisation bayésienne · recherche guidée</option><option value="lhs">Latin hypercube · couverture stratifiée</option><option value="hyperband">Hyperband · sélection progressive</option></select></label>
+     <label>Agent à optimiser<select id="opt-algorithm" name="algorithm"><option value="both">Les deux agents, séparément</option><option value="qlearning">Q-Learning</option><option value="double_qlearning">Double Q-Learning</option></select></label>
+    </div>
+    <div id="opt-description" class="opt-explainer"></div>
+    <div class="row opt-budget">
+     <label>Épisodes par entraînement<input id="opt-episodes" name="episodes" type="number" value="500" min="50" max="10000" step="50" required><small>200 requêtes par épisode</small></label>
+     <label id="opt-grid-label">Valeurs par paramètre<input id="opt-grid" name="grid_size" type="number" value="4" min="2" max="8" step="1" required><small id="opt-grid-count">4 × 4 = 16 paires</small></label>
+     <label id="opt-trials-label" hidden>Paires à explorer<input id="opt-trials" name="trials" type="number" value="12" min="4" max="64" step="1" required><small>hors paramètres par défaut</small></label>
+     <label>Entraînements par paire<input id="opt-repeats" name="repeats" type="number" value="2" min="1" max="5" step="1" required><small>graines d’apprentissage distinctes</small></label>
+    </div>
+    <details class="opt-advanced"><summary>Plages de recherche et protocole</summary>
+     <div class="opt-ranges">
+      <fieldset><legend>η · vitesse d’apprentissage</legend><div class="row"><label>Minimum<input id="opt-eta-min" name="eta_min" type="number" value="0.01" min="0.000001" max="0.999999" step="any" required></label><label>Maximum<input id="opt-eta-max" name="eta_max" type="number" value="0.5" min="0.000002" max="1" step="any" required></label></div><p class="note">Échelle logarithmique pour explorer aussi les petites valeurs.</p></fieldset>
+      <fieldset><legend>γ · importance du futur</legend><div class="row"><label>Minimum<input id="opt-gamma-min" name="gamma_min" type="number" value="0" min="0" max="0.999998" step="any" required></label><label>Maximum<input id="opt-gamma-max" name="gamma_max" type="number" value="0.99" min="0.000001" max="0.999999" step="any" required></label></div><p class="note">Échelle linéaire ; γ reste strictement inférieur à 1.</p></fieldset>
+     </div>
+     <div class="row"><label>Scénarios de validation<input id="opt-validation" name="validation_seeds" type="number" value="5" min="2" max="20" step="1" required><small>par niveau de trafic</small></label><label>Scénarios de test final<input id="opt-test" name="test_seeds" type="number" value="10" min="5" max="50" step="1" required><small>nouveaux scénarios, par trafic</small></label><label>Graine de recherche<input id="opt-seed" name="seed" type="number" value="42" min="0" max="1000000" step="1" required><small>pour reproduire l’expérience</small></label></div>
+    </details>
+    <p class="note" id="opt-estimate"></p>
+    <div class="row opt-actions"><button id="opt-start" type="submit">Lancer l’optimisation</button><button id="opt-stop" class="ghost" type="button" disabled>Arrêter la recherche</button><button id="opt-export" class="ghost" type="button" disabled>Exporter les résultats et modèles</button></div>
+   </form>
+   <p id="opt-error" class="ko" role="alert" hidden></p>
+   <div id="opt-status" class="opt-status" role="status" aria-live="polite">Prêt à comparer les paramètres. Référence : γ = 0,9 et η = 0,1.</div>
+   <div class="bar" role="progressbar" id="opt-progress" aria-label="Progression de la recherche" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><i id="opt-progress-fill"></i></div>
+   <div id="opt-run-meta" class="note"></div>
+   <div id="opt-results" class="opt-results" aria-live="polite"></div>
+   <div id="opt-plots" hidden>
+    <div class="row opt-chart-heading"><h3>La recherche en images</h3><label>Agent affiché<select id="opt-view"><option value="qlearning">Q-Learning</option><option value="double_qlearning">Double Q-Learning</option></select></label></div>
+    <div class="opt-chart-grid"><div class="opt-chart"><h4>Paires explorées</h4><canvas id="opt-space" height="240" role="img" aria-label="Paires de gamma et eta explorées, colorées selon leur score de validation"></canvas><p class="note">Couleur vive = meilleur score à budget complet. Contour vide = budget partiel. Losange = paramètres par défaut.</p></div><div class="opt-chart"><h4>Meilleur score de validation</h4><canvas id="opt-convergence" height="240" role="img" aria-label="Évolution du meilleur score de validation parmi les essais entraînés au budget complet"></canvas><p class="note">Meilleur score au budget complet, au fil des évaluations. Ligne pointillée = référence par défaut.</p></div></div>
+   </div>
+   <div id="opt-trial-area" hidden><h3>Journal des essais</h3><p class="note">Score = récompense moyenne par requête, sans actualisation. Plus proche de 0 = meilleur. Les essais à budget partiel ne participent pas au choix final.</p><div class="qwrap opt-trials"><table><thead><tr><th>Essai / agent</th><th>γ</th><th>η</th><th>Épisodes</th><th>Score validation ↑</th><th>Latence (ms) ↓</th><th>Rejets (%) ↓</th><th>État</th></tr></thead><tbody id="opt-trial-rows"></tbody></table></div></div>
+   <details class="opt-protocol"><summary>Comment les paramètres sont-ils choisis ?</summary>
+    <p>Chaque paire entraîne un nouvel agent avec la même règle d’apprentissage :</p><div class="opt-formula">Q(s,a) ← Q(s,a) + η [ r + γ max<sub>a′ disponible</sub> Q(s′,a′) − Q(s,a) ]</div>
+    <p>Double Q-Learning conserve sa variante à deux tables : une table choisit l’action, l’autre l’évalue. Le futur vaut zéro en fin d’épisode. La recherche choisit γ et η ; elle ne remplace pas la formule.</p>
+    <p>Les paires sont évaluées sans exploration ni apprentissage sur les mêmes scénarios de validation, avec le même poids pour les trafics 40 %, 70 % et 90 %. Les paramètres par défaut sont réentraînés avec le même budget. Si aucune paire ne les dépasse en validation, ils sont conservés.</p>
+    <p>Le choix est ensuite testé sur de nouveaux scénarios, jamais utilisés pour la sélection. Un gain de validation peut ne pas se confirmer au test. « ± » dans les résultats globaux indique l’écart-type entre entraînements indépendants ; une seule répétition ne mesure pas cette variabilité.</p>
+    <p>Avec Hyperband, les candidats retenus poursuivent leur apprentissage ; la baisse d’exploration suit toujours le budget complet. Les courbes d’apprentissage exportées décrivent l’entraînement avec exploration, et non le test final.</p>
+   </details>
+  </div>
+ </details>
+</section>
+
+</main>
+<script>
+"use strict";
+const $=id=>document.getElementById(id);
+const get=async p=>{const r=await fetch(p),j=await r.json();if(!r.ok)throw new Error(j.error||r.status);return j};
+const post=async(p,b)=>{const r=await fetch(p,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(b||{})}),j=await r.json();if(!r.ok)throw new Error(j.error||r.status);return j};
+const f=(x,n=2)=>x==null||isNaN(x)?'–':Number(x).toFixed(n);
+const dec=s=>[Math.floor(s/9),Math.floor(s/3)%3,s%3];
+const lab=lv=>lv.map(l=>`<i class="l${l}">${l}</i>`).join('');
+const SN=['A','B','C'],SC=['#5b6cf0','#0f9ab0','#d6568c'];
+
+/* ---------- 0. MDP ---------- */
+async function loadMdp(){
+ const c=await get('/api/config'),r=c.reward,w=r.weights,e=c.environment,l=c.learning;
+ $('mdp').innerHTML=`
+ <div><h4>S : états</h4>${c.states.length} états = niveau de CPU de chaque serveur (0 faible ${c.cpu_thresholds['faible']}, 1 moyen ${c.cpu_thresholds['moyen']}, 2 élevé ${c.cpu_thresholds['élevé']}). Le CPU vient du remplissage de la file d’attente.</div>
+ <div><h4>A : actions</h4>${c.actions.map(a=>a.name).join(', ')}. ${c.action_masking}</div>
+ <div><h4>P : transitions</h4>${c.transitions}</div>
+ <div><h4>R : récompense</h4><code>${r.formula}</code><br>T = ${r.T}. L = ${r.L}. F = ${r.F}. Surcharge : ${r.Surcharge}.<br>Poids : α=${w.alpha}, β=${w.beta}, δ=${w.delta}, ζ=${w.zeta}, T<sub>ref</sub>=${r.Tref_ms} ms.</div>
+ <div><h4>γ, η, ε</h4>γ = ${c.gamma} (importance du futur). η = ${l.eta}. ε passe de ${l.eps_start} à ${l.eps_end} sur ${l.eps_decay_fraction*100} % des épisodes. ${l.requests_per_episode} requêtes par épisode.</div>
+ <div><h4>Serveurs et environnement</h4>${c.servers.map(s=>`${s.name} (vitesse ×${s.capacity})`).join(', ')}. Requêtes lourdes : ${e.p_heavy*100} %. Rejet si attente > ${e.max_wait_ms} ms. Panne : proba ${e.p_outage} par requête, ${e.outage_len_requests} requêtes.</div>`;
+ $('states').innerHTML=c.states.map(s=>`<tr><td>${s.index}</td><td class="st">${lab(s.levels)}</td><td style="text-align:left">${s.label}</td></tr>`).join('');
+}
+
+/* ---------- 1. Entraînement ---------- */
+let hist={q:[],d:[]},upSince={qlearning:0,double_qlearning:0},buf={qlearning:[],double_qlearning:[]},snaps=null,tables=null,polling=false,total=5000,gP=null,lastRender=0,frozen=false,shown=null,lastStatus=null;
+const fr=(x,n=2)=>f(x,n).replace('.',',');
+const WORD=['faible','moyenne','élevée'],KEYS={ql:'qlearning',dq:'double_qlearning'};
+function setReady(ok){$('evbtn').disabled=!ok;for(const o of $('alg').options)if(o.value!=='round_robin')o.disabled=!ok}
+function phaseText(s){
+ const e=s.epsilon,pe=Math.round(e*100),pu=100-pe;
+ if(!s.episode)return '';
+ if(s.finished&&!s.running)return `<b>Entraînement terminé.</b> Chaque agent a vu ${s.steps_per_agent.toLocaleString('fr-FR')} requêtes. Il suit maintenant surtout son carnet (il lui reste ${pe} % de hasard).`;
+ if(e>.6)return `<b>Phase 1 : exploration.</b> L’agent choisit au hasard dans ${pe} % des cas pour découvrir ce que valent les serveurs. Son carnet est encore presque vide.`;
+ if(e>.2)return `<b>Phase 2 : apprentissage.</b> Il mélange hasard (${pe} %) et expérience (${pu} %). Son carnet se précise.`;
+ return `<b>Phase 3 : il applique ce qu’il a appris</b> (${pu} % des choix), avec un peu de hasard (${pe} %) pour continuer à vérifier.`;
+}
+function renderStatus(s){
+ lastStatus=s;gP=s.params||gP;total=s.total||total;
+ $('pb').style.width=(s.progress*100)+'%';$('te').textContent=s.episode+' sur '+s.total;
+ $('ts').textContent=s.steps_per_agent.toLocaleString('fr-FR');$('tt').textContent=f(s.elapsed_s,0);
+ $('phase').innerHTML=phaseText(s);
+ const q=s.agents.qlearning,d=s.agents.double_qlearning;
+ $('res').innerHTML=s.episode?`Sur les 100 dernières parties : <b>Q-Learning</b> met en moyenne ${fr(q.lat_mean_avg100,0)} ms par requête et en rejette ${fr(q.fail_rate_avg100*100,1)} % ; <b>Double Q-Learning</b> ${fr(d.lat_mean_avg100,0)} ms et ${fr(d.fail_rate_avg100*100,1)} %. Au début c’est mauvais : c’est normal, l’agent essaie encore au hasard.`:'';
+ $('go').disabled=s.running;$('stop').disabled=!s.running;
+}
+function ma(a,n=100){const o=[];let s=0;for(let i=0;i<a.length;i++){s+=a[i];if(i>=n)s-=a[i-n];o.push(s/Math.min(i+1,n))}return o}
+function drawCurve(){
+ const c=$('curve'),W=c.clientWidth,H=260,dp=devicePixelRatio||1;c.width=W*dp;c.height=H*dp;
+ const x=c.getContext('2d');x.setTransform(dp,0,0,dp,0,0);const cs=getComputedStyle(document.documentElement);
+ const A=ma(hist.q),B=ma(hist.d);if(A.length<2)return;
+ const all=A.concat(B),lo=Math.min(...all),hi=Math.max(...all),p=44;
+ x.strokeStyle=cs.getPropertyValue('--line');x.fillStyle=cs.getPropertyValue('--mute');x.font='12px system-ui';
+ for(let i=0;i<=4;i++){const y=10+(H-34)*i/4;x.beginPath();x.moveTo(p,y);x.lineTo(W-6,y);x.stroke();x.fillText((hi-(hi-lo)*i/4).toFixed(0),2,y+4)}
+ x.fillText('↑ meilleur',2,H-4);x.fillText('parties jouées : 0 → '+total,W-190,H-4);
+ [[A,'#d9822b'],[B,'#1b8f8a']].forEach(([d,col])=>{x.strokeStyle=col;x.lineWidth=2;x.beginPath();
+  d.forEach((v,i)=>{const px=p+(W-p-6)*i/(Math.max(total,d.length)-1),py=10+(H-34)*(1-(v-lo)/(hi-lo||1));i?x.lineTo(px,py):x.moveTo(px,py)});x.stroke()});
+}
+
+/* « Une décision à la loupe » */
+function story(){
+ const k=$('usel').value,b=buf[k];
+ if(!b.length){$('story').textContent='L’exemple apparaîtra dès que l’entraînement démarre.';return}
+ if(!shown)shown=b[b.length-1];
+ const u=shown,g=u.update,lv=dec(u.state),eta=gP?gP.lr:0.1,gam=gP?gP.gamma:0.9,T=u.terms,last=u.step===199;
+ const i=b.findIndex(z=>z.id===u.id);
+ const choix=u.explored?`<b>au hasard</b> : l’agent explore. À ce stade, ${Math.round(u.epsilon*100)} % de ses choix sont aléatoires, pour découvrir des options qu’il n’a pas encore essayées.`
+  :`<b>parce que son carnet</b> indique que c’est le meilleur choix dans cette situation (il exploite son expérience).`;
+ const res=u.failed?`La requête a été <b>rejetée</b> (serveur saturé ou en panne) : grosse pénalité.`:`La requête a été traitée en <b>${fr(u.latency,0)} ms</b>.`;
+ const futur=last?`C’est la dernière requête de la partie : il n’y a pas d’avenir à prendre en compte, valeur 0.`
+  :(g.table==='Q'?`Meilleure valeur du carnet pour la situation suivante : <b>${fr(g.future)}</b>.`
+   :`Le carnet ${g.table} désigne le serveur ${SN[g.select_action]} comme meilleur choix pour la suite, mais c’est <b>l’autre carnet</b> qui donne sa valeur : <b>${fr(g.future)}</b>. L’agent ne se fie donc pas à un seul avis.`);
+ const sens=g.td_error>0?`C’était <b>mieux</b> que ce que le carnet prévoyait.`:`C’était <b>pire</b> que ce que le carnet prévoyait.`;
+ $('story').innerHTML=`<div class="note">Exemple ${i+1} sur ${b.length} récents (correction n° ${u.id.toLocaleString('fr-FR')}, partie ${u.episode})</div><ol>
+ <li><b>Situation observée.</b> <span class="st">${lab(lv)}</span> c’est-à-dire : ${lv.map((l,j)=>`${SN[j]} ${WORD[l]}`).join(', ')}.</li>
+ <li><b>Choix.</b> L’agent envoie la requête au <b>serveur ${SN[u.action]}</b>, ${choix}</li>
+ <li><b>Résultat.</b> ${res} Note reçue : <b>${fr(u.reward)}</b> = −(${fr(T.latence)} pour la lenteur + ${fr(T.cpu)} pour la charge du serveur + ${fr(T.echec)} pour un rejet + ${fr(T.surcharge)} pour une surcharge). Plus la note est proche de 0, meilleur est le choix.</li>
+ <li><b>Correction du carnet</b> (${g.table==='Q'?'':'carnet '+g.table+', '}case « cette situation × serveur ${SN[u.action]} »). Avant : <b>${fr(g.q_old)}</b>. ${futur} Nouvelle estimation (la « cible ») = note ${fr(u.reward)} + ${fr(gam,1)} × ${fr(g.future)} = <b>${fr(g.target)}</b>. Écart avec l’ancienne valeur : ${fr(g.td_error)}. ${sens} L’agent corrige seulement ${Math.round(eta*100)} % de l’écart : la case passe de ${fr(g.q_old)} à <b>${fr(g.q_new)}</b>.</li></ol>`;
+}
+function moveStory(d){const b=buf[$('usel').value];if(!b.length)return;const i=shown?b.findIndex(z=>z.id===shown.id):b.length-1;
+ shown=b[Math.max(0,Math.min(b.length-1,(i<0?0:i)+d))];frozen=true;$('freeze').textContent='Reprendre';story()}
+$('prev').onclick=()=>moveStory(-1);$('next').onclick=()=>moveStory(1);
+$('freeze').onclick=()=>{frozen=!frozen;$('freeze').textContent=frozen?'Reprendre':'Figer';if(!frozen){shown=null;story()}};
+$('usel').onchange=()=>{shown=null;story();if($('expert').open)renderUpdates()};
+setInterval(()=>{if(!frozen&&lastStatus&&lastStatus.running){shown=null;story()}},3000);
+
+/* « Ce que l'agent a appris » */
+function curTables(){const v=$('snap').value;return v==='live'?tables:snaps&&snaps[+v]}
+function policyOf(key,src){
+ const Q=src[key].Q,N=src[key].N;
+ return Q.map((row,s)=>{const n=N[s].reduce((a,b)=>a+b,0);if(!n)return{s,n:0};
+  const o=row.map((v,i)=>[v,i]).sort((a,b)=>b[0]-a[0]);return{s,n,best:o[0][1],second:o[1][1],margin:o[0][0]-o[1][0]}})}
+function renderPolicy(){
+ const src=curTables();if(!src)return;
+ const P=policyOf(KEYS[$('psel').value],src);
+ $('pol').innerHTML=P.map(p=>{const lv=dec(p.s),words=lv.map((l,i)=>`${SN[i]} ${WORD[l]}`).join(', ');
+  if(!p.n)return`<tr class="dim"><td class="st">${lab(lv)}</td><td style="text-align:left">${words}</td><td>?</td><td style="text-align:left">jamais vécue</td><td>0</td></tr>`;
+  const sure=p.margin<.5?`hésite entre ${SN[p.best]} et ${SN[p.second]}`:p.margin<2?'plutôt sûr':'très sûr';
+  return`<tr><td class="st">${lab(lv)}</td><td style="text-align:left">${words}</td><td><span class="chip" style="background:${SC[p.best]}">${SN[p.best]}</span></td><td style="text-align:left"><span class="mbar"><i style="width:${Math.min(100,p.margin*25)}%"></i></span> ${sure}</td><td>${p.n.toLocaleString('fr-FR')}</td></tr>`}).join('');
+ const vis=P.filter(p=>p.n),out=[];
+ if(!vis.length)out.push('Le carnet est vide : l’agent n’a encore rien appris, il ne peut préférer aucun serveur.');
+ else{
+  out.push(`Situations déjà vécues : <b>${vis.length} sur 27</b>.`);
+  for(let k=0;k<3;k++){const c=vis.filter(p=>dec(p.s)[k]===2&&dec(p.s).some(l=>l!==2));
+   if(c.length){const av=c.filter(p=>p.best!==k).length;out.push(`Quand le serveur <b>${SN[k]}</b> est très chargé, l’agent l’évite dans <b>${Math.round(100*av/c.length)} %</b> des situations (${av} sur ${c.length}).`)}}
+  if(P[0].n)out.push(`Quand tous les serveurs sont calmes, il préfère le serveur <b>${SN[P[0].best]}</b>${P[0].best===2?' (le plus rapide)':''}.`);
+ }
+ $('insights').innerHTML='<ul>'+out.map(x=>`<li>${x}</li>`).join('')+'</ul>';
+}
+
+/* Mode expert */
+function renderQ(){
+ const src=curTables();if(!src)return;
+ const [ag,tb]=$('qsel').value.split(':'),key=KEYS[ag],mat=src[key][tb],isN=tb==='N';
+ const hot=new Set($('snap').value==='live'?buf[key].slice(-25).map(u=>u.state+','+u.action):[]);
+ const flat=mat.flat(),lo=Math.min(...flat),hi=Math.max(...flat);let h='';
+ for(let s=0;s<27;s++){const r=mat[s],m=Math.max(...r);
+  h+=`<tr><td class="st">${lab(dec(s))}</td>`+r.map((x,a)=>`<td class="${!isN&&x===m&&m!==0?'best':''} ${hot.has(s+','+a)?'hot':''}" style="background:rgba(var(--hl),${hi>lo?((x-lo)/(hi-lo)*.45).toFixed(2):0})">${isN?x:x.toFixed(2)}</td>`).join('')+'</tr>'}
+ $('qb').innerHTML=h;
+}
+function renderUpdates(){
+ const rows=buf[$('usel').value].slice(-14).reverse();
+ $('ub').innerHTML=rows.map(u=>{const g=u.update;return`<tr><td>${u.id}</td><td>${u.episode}</td><td class="st">${lab(dec(u.state))}</td><td>${SN[u.action]}</td><td>${u.explored?'hasard':'carnet'}</td><td>${f(u.reward)}</td><td>${g.table}</td><td>${f(g.q_old)}</td><td>${f(g.gamma_future)}</td><td>${f(g.target)}</td><td>${f(g.td_error)}</td><td><b>${f(g.q_new)}</b></td></tr>`}).join('');
+}
+function renderAll(){renderPolicy();if($('expert').open){renderQ();renderUpdates()}}
+
+async function pollTraining(){
+ if(polling)return;polling=true;
+ try{
+  const st=await get('/api/training/status');renderStatus(st);
+  if(st.episode<hist.q.length){hist={q:[],d:[]};upSince={qlearning:0,double_qlearning:0};buf={qlearning:[],double_qlearning:[]};shown=null}
+  if(st.episode>0){
+   const h=await get('/api/training/history?since='+hist.q.length);
+   hist.q.push(...h.qlearning.reward);hist.d.push(...h.double_qlearning.reward);drawCurve();
+   tables=await get('/api/training/qtables');
+   for(const k of ['qlearning','double_qlearning']){
+    const u=await get(`/api/training/updates?agent=${k}&since=${upSince[k]}&limit=40`);
+    if(u.length){upSince[k]=u[u.length-1].id;buf[k]=buf[k].concat(u).slice(-60)}}
+   const now=Date.now();
+   if(now-lastRender>3000||!st.running){renderAll();lastRender=now}
+   if(!shown)story();
+  }
+  if(st.running){setTimeout(()=>{polling=false;pollTraining()},600);return}
+  if(st.model_available){
+   setReady(true);snaps=await get('/api/training/snapshots');
+   $('snap').innerHTML='<option value="live">Maintenant (version finale)</option>'+snaps.map((s,i)=>`<option value="${i}">Après ${s.episode} parties (hasard : ${Math.round(s.epsilon*100)} %)</option>`).join('');
+   renderAll();story();
+  }
+ }catch(e){$('conn').textContent='Erreur : '+e.message;$('conn').className='note ko'}
+ polling=false;
+}
+$('go').onclick=async()=>{
+ try{hist={q:[],d:[]};upSince={qlearning:0,double_qlearning:0};buf={qlearning:[],double_qlearning:[]};snaps=null;shown=null;frozen=false;$('freeze').textContent='Figer';setReady(false);$('ev').innerHTML='';
+  $('snap').innerHTML='<option value="live">Maintenant</option>';
+  await post('/api/training/start',{episodes:+$('nep').value,lr:+$('lr').value,gamma:+$('gm').value,delay_ms:+$('dl').value});pollTraining()}
+ catch(e){alert(e.message)}};
+$('stop').onclick=()=>post('/api/training/stop');
+$('pre1').onclick=()=>{$('nep').value=300;$('dl').value=40};$('pre2').onclick=()=>{$('nep').value=5000;$('dl').value=0};
+$('psel').onchange=renderPolicy;$('snap').onchange=renderAll;$('qsel').onchange=renderQ;$('rfs').onclick=renderAll;
+$('expert').ontoggle=()=>{if($('expert').open){renderQ();renderUpdates()}};
+
+/* ---------- 2. Évaluation ---------- */
+const MET=[['lat_mean','Latence moy. (ms) ↓',1],['lat_p95','Latence p95 (ms) ↓',1],['throughput','Débit (req/s) ↑',1],['fail_rate','Rejets (%) ↓',100],['load_gap','Écart de charge (pts) ↓',1],['reward','Récompense ↑',1]];
+const verdict=sc=>{const R=sc.results,rr=R.round_robin,q=R.qlearning,d=R.double_qlearning,p=x=>fr(x*100,1);
+ return `Round Robin rejette ${p(rr.fail_rate.mean)} % des requêtes, contre ${p(q.fail_rate.mean)} % pour Q-Learning et ${p(d.fail_rate.mean)} % pour Double Q-Learning. Latence moyenne : ${fr(rr.lat_mean.mean,0)} ms contre ${fr(q.lat_mean.mean,0)} ms et ${fr(d.lat_mean.mean,0)} ms.`};
+$('evbtn').onclick=async()=>{
+ $('evmsg').textContent='Calcul en cours…';
+ try{const r=await post('/api/evaluation/run',{});let h='';
+  for(const [name,sc] of Object.entries(r.scenarios)){
+   h+=`<h3>Trafic ${name} (les serveurs sont occupés à ${sc.load*100} % en moyenne), ${r.n_seeds} scénarios de test</h3><p class="note"><b>En clair :</b> ${verdict(sc)}</p><div class="qwrap"><table><thead><tr><th>Méthode</th>${MET.map(m=>`<th>${m[1]}</th>`).join('')}<th>Part A / B / C (%)</th></tr></thead><tbody>`;
+   for(const x of Object.values(sc.results))h+=`<tr><td><b>${x.label}</b></td>${MET.map(m=>`<td>${fr(x[m[0]].mean*m[2],1)} ± ${fr(x[m[0]].std*m[2],1)}</td>`).join('')}<td>${x.share.map(v=>fr(v*100,0)).join(' / ')}</td></tr>`;
+   h+='</tbody></table></div>'}
+  $('ev').innerHTML=h+'<p class="note">↓ = plus petit est mieux, ↑ = plus grand est mieux. Chaque valeur est une moyenne ± écart-type.</p>';$('evmsg').textContent=''}
+ catch(e){$('evmsg').textContent=e.message}};
+
+/* ---------- 3. Simulation en direct (les décisions viennent de Python) ---------- */
+let sid=null,sidAlg=null,running=false,busy=false,lastT=0,parts=[],srv=null,flash=[0,0,0],logRows=[];
+const spd=()=>$('spd').value/100;
+const why=e=>{
+ if(!e.q_values)return 'Round Robin : on passe au serveur suivant disponible, sans regarder la charge.';
+ const down=[0,1,2].filter(k=>!e.valid.includes(k)).map(k=>SN[k]);
+ return `${e.server} a la meilleure note espérée (${f(e.q_values[e.action],1)}) parmi les serveurs disponibles.`+(down.length?` ${down.join(', ')} interdit (en panne).`:'');
+};
+async function ensureSession(){
+ if(sid&&sidAlg===$('alg').value)return;
+ const r=await post('/api/live/start',{algorithm:$('alg').value,load:$('load').value/100});sid=r.session;sidAlg=r.algorithm;parts=[];logRows=[];srv=null;
+}
+async function tick(){
+ if(!running||busy||!sid)return;busy=true;
+ try{const now=performance.now(),dt=Math.min(600,now-(lastT||now))*spd();lastT=now;
+  const r=await post(`/api/live/${sid}/tick`,{dt_ms:dt});srv=r.servers;
+  r.events.forEach((e,i)=>{parts.push({t0:performance.now()+i/Math.max(1,r.events.length)*150,a:e.action,f:e.failed});if(e.failed)flash[e.action]=1});
+  logRows=r.events.slice().reverse().concat(logRows).slice(0,10);
+  const m=r.metrics;$('n').textContent=m.requests;$('lm').textContent=m.lat_mean==null?'–':f(m.lat_mean,0)+' ms';$('lp').textContent=m.lat_p95==null?'–':f(m.lat_p95,0)+' ms';
+  $('fl').textContent=m.failed+' ('+f(m.fail_rate*100,1)+' %)';$('th').textContent=f(m.throughput,1)+' req/s';$('gp').textContent=f(m.load_gap,1)+' pts';$('rw').textContent=f(m.reward_sum,0);
+  $('lb').innerHTML=logRows.map(e=>`<tr><td>${e.id}</td><td class="st">${lab(e.levels)}</td><td>${e.cpu_before.map(v=>f(v,0)).join(' / ')}</td><td>${e.q_values?e.q_values.map(v=>f(v,1)).join(' / '):'aucune (tour de rôle)'}</td><td><b>${e.server}</b>${e.valid.length<3?' (valides : '+e.valid.map(k=>SN[k]).join(',')+')':''}</td><td class="${e.failed?'ko':''}">${e.failed?'rejet : '+e.reason:f(e.latency_ms,0)+' ms'}</td><td title="latence ${e.terms.latence}, cpu ${e.terms.cpu}, échec ${e.terms.echec}, surcharge ${e.terms.surcharge}">${f(e.reward)}</td><td style="text-align:left;white-space:normal">${why(e)}</td></tr>`).join('');
+ }catch(e){running=false;$('run').textContent='Démarrer';alert(e.message)}
+ busy=false;
+}
+setInterval(tick,150);
+$('run').onclick=async()=>{
+ if(running){running=false;$('run').textContent='Démarrer';return}
+ try{await ensureSession();running=true;lastT=0;$('run').textContent='Pause'}catch(e){alert(e.message)}};
+$('alg').onchange=()=>{sid=null;if(running){running=false;$('run').textContent='Démarrer'}srv=null;parts=[];$('n').textContent=0};
+$('load').oninput=async e=>{$('lv').textContent=e.target.value+' %';if(sid)post(`/api/live/${sid}/load`,{load:e.target.value/100})};
+$('spd').oninput=e=>{$('sv').textContent='×'+(e.target.value/100).toFixed(2)};
+document.querySelectorAll('[data-f]').forEach(b=>b.onclick=()=>sid&&post(`/api/live/${sid}/fault`,{server:b.dataset.f}));
+$('burst').onclick=()=>sid&&post(`/api/live/${sid}/burst`);
+
+function draw(now){
+ requestAnimationFrame(draw);
+ const c=$('sim'),W=c.clientWidth,H=330,dp=devicePixelRatio||1;
+ if(c.width!==Math.round(W*dp)){c.width=Math.round(W*dp);c.height=H*dp}
+ const x=c.getContext('2d');x.setTransform(dp,0,0,dp,0,0);x.clearRect(0,0,W,H);
+ const cs=getComputedStyle(document.documentElement),g=n=>cs.getPropertyValue(n).trim(),ink=g('--ink'),mute=g('--mute'),line=g('--line'),panel=g('--panel');
+ const lbx=W*.3,lby=H/2,sx=Math.max(W*.55,W-270),sw=W-sx-10,sh=84,sy=[14,123,232];
+ const S=srv||[0,1,2].map(i=>({name:SN[i],capacity:[.7,1,1.5][i],up:true,wait_ms:0,cpu_pct:0,level:0,handled:0,down_left:0}));
+ const tot=S.reduce((a,s)=>a+s.handled,0)||1;
+ x.lineWidth=1.5;x.strokeStyle=line;x.beginPath();x.moveTo(0,lby);x.lineTo(lbx-46,lby);x.stroke();
+ sy.forEach(y=>{x.beginPath();x.moveTo(lbx+46,lby);x.lineTo(sx,y+sh/2);x.stroke()});
+ x.fillStyle=panel;x.strokeStyle=ink;x.lineWidth=2;x.beginPath();x.roundRect(lbx-46,lby-34,92,68,10);x.fill();x.stroke();
+ x.fillStyle=ink;x.textAlign='center';x.font='600 13px system-ui';x.fillText('Load',lbx,lby-3);x.fillText('Balancer',lbx,lby+14);
+ S.forEach((s,i)=>{flash[i]*=.94;
+  x.fillStyle=panel;x.strokeStyle=s.up?SC[i]:'#d4483b';x.lineWidth=2+flash[i]*3;x.beginPath();x.roundRect(sx,sy[i],sw,sh,10);x.fill();x.stroke();
+  x.textAlign='left';x.fillStyle=SC[i];x.font='800 15px system-ui';x.fillText('Serveur '+s.name,sx+12,sy[i]+22);
+  x.font='12px system-ui';x.fillStyle=mute;x.fillText('vitesse ×'+s.capacity+', '+Math.round(100*s.handled/tot)+' % des requêtes',sx+12,sy[i]+40);
+  x.fillText(s.up?'attente '+f(s.wait_ms,0)+' ms, CPU '+f(s.cpu_pct,0)+' %':'EN PANNE : encore '+s.down_left+' requêtes',sx+12,sy[i]+57);
+  x.fillStyle=line;x.fillRect(sx+12,sy[i]+66,sw-24,7);x.fillStyle=s.up?['#2e9e6a','#d99a1a','#d4483b'][s.level]:'#d4483b';x.fillRect(sx+12,sy[i]+66,(sw-24)*(s.up?s.cpu_pct/100:1),7)});
+ const T=1000;parts=parts.filter(p=>now-p.t0<T);
+ parts.forEach(p=>{const t=(now-p.t0)/T;if(t<0)return;let px,py;
+  if(t<.4){const u=t/.4;px=u*(lbx-46);py=lby}else{const u=(t-.4)/.6,ty=sy[p.a]+sh/2;px=lbx+46+u*(sx-lbx-46);py=lby+(ty-lby)*u}
+  if(p.f&&t>.75)return;x.fillStyle=t<.4?mute:(p.f?'#d4483b':SC[p.a]);x.beginPath();x.arc(px,py,p.f?5:4,0,7);x.fill()});
+}
+requestAnimationFrame(draw);
+
+/* ---------- démarrage ---------- */
+(async()=>{
+ try{await loadMdp();$('conn').textContent='API Python connectée.';$('conn').className='note ok';
+  const st=await get('/api/training/status');if(st.model_available||st.running)pollTraining();
+ }catch(e){$('conn').textContent='API injoignable : lancez « python run.py » puis ouvrez http://localhost:5000';$('conn').className='note ko'}
+})();
+addEventListener('resize',drawCurve);
+</script>
+<script src="/optimization-assets/optimization.js" defer></script>
+</body></html>

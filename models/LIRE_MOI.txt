@@ -1,0 +1,5 @@
+﻿Dossier des modèles.
+
+Votre qtables.json existant doit rester ici lors d'une mise à jour.
+Cette archive de code ne contient aucun modèle préentraîné ni résultat local.
+L'optimisation enregistre ses propres résultats dans le sous-dossier optimization.

@@ -1,0 +1,34 @@
+{
+  "release": "2026-10-18-optimization",
+  "tests": 17,
+  "excluded": [
+    ".venv",
+    "__pycache__",
+    "qtables.json",
+    "optimization results",
+    "local launchers"
+  ],
+  "sha256": {
+    "run.py": "4b9d3173b619e516d52557b7c3938bc9569eeb08e5dbe90b34a5ae0ba466d63a",
+    "requirements.txt": "67cf4c8a5ea3337aedcae04273ba251f697b5b736fb528bd31d40b3f792f6415",
+    "README.md": "f725a46b5a71511e2f280b2bb2e9e01a63ff6a3b66ddbe216c5b0d83297cbcaa",
+    "OPTIMIZATION.md": "031bbf0fc14fa917447df0682232b763e3a6bca0d90d9ef7e2a042837c1632c5",
+    "app/__init__.py": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "app/agents.py": "3eea67ebbd0045dab0a0068f06af5b340c73944bd43fae67417351aa5ce78119",
+    "app/api.py": "a8935bcbe1cb402ac0190f3d08d92423cb3694def334654e645898d5abda4b07",
+    "app/config.py": "e470e151dc35b4b88baeddcc353ebdca4685e2878938961f43e6f388cec11c18",
+    "app/episode.py": "021b730f75b4e0793217641d3df797215eae33a573aeae166a8c18586243efb4",
+    "app/evaluator.py": "0a0347ee800cc11bb431a3089d5fb6d66c7ea6ae29b299ffff93c8e0e6f85264",
+    "app/live.py": "d339029227b5f2d358f7b2e433ae062da75f16f8b089ff90b91c1b92c0ccd119",
+    "app/mdp.py": "f0f28635f4e3f5ba9bb767542f6264f6aca57dca7ad4cf74ad28f73782a11635",
+    "app/optimization.py": "fefa2c2544f464e3c99fda5e81333483a05ae0dd84e8dbfce88cd1819bc95ed9",
+    "app/optimization_api.py": "9d40aac3e54b8412c329e5df3f0c0e74f9114d2fe00c759e9a63287d9bfbad37",
+    "app/simulator.py": "85467f55557fa072c544ec21098bd55c99aa87a0a790c9e807ddb57dc7f8bf09",
+    "app/trainer.py": "aafcc5397212d7380abfceb7202274aa52d921a0b95f20ec5042dd482b7e1564",
+    "static/index.html": "82df49d460f906dd04ba1aba68e3d45f93e0ebc9f5ed8c2f3418c7f89910477d",
+    "static/optimization.css": "0ddddbf50ae458205b72cb60be9431390d9bc95546c67c72ea348b4eb9bcaf4b",
+    "static/optimization.js": "d92802ca41a5104a599c0f008708980c0a019dbc60d0eb9428f5aead3ea343ad",
+    "tests/test_core.py": "baa94f5944123fc3515080d2ac53fc4a7ba35d7a53f43740dcfbdaccec74163f",
+    "tests/test_optimization.py": "d24d95be0e2c8a58cc6f1072dd9a1483edfc8aeebcc68749ac2e2df2bad24ced"
+  }
+}
